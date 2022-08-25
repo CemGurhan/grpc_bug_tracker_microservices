@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/cemgurhan/api_gateway/buf/proto_files/gen";
 
+import "google/api/annotations.proto";
 
 message Bug {
 
@@ -33,8 +34,11 @@ message CreateBugRes {
 
 service BugService {
 
-    rpc CreateBug(CreateBugReq) returns (CreateBugRes);
-    
-    
+    rpc CreateBug(CreateBugReq) returns (CreateBugRes){
+        option (google.api.http) = {
+            post: "/api/bug/create"
+            body: "*"
+        };
+    }
 
 }
