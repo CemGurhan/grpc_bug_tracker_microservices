@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+option go_package = "github.com/cemgurhan/api_gateway/buf/proto_files/gen";
+
+import "google/api/annotations.proto";
+
+message Bug {
+
+    string id = 1;
+    string name = 2;
+    BugType type = 3;
+    enum BugType {
+
+        WARNING = 0;
+        FATAL = 1;
+    
+    }
+    
+}
+
+message CreateBugReq {
+
+    Bug bug =1;
+
+
+}
+
+message CreateBugRes {
+
+    string message = 1;
+    bool succes = 2;
+
+}
+
+service BugService {
+
+    rpc CreateBug(CreateBugReq) returns (CreateBugRes){
+        option (google.api.http) = {
+            post: "api/bug/create"
+            body: "*"
+        };
+    }
+
+}
