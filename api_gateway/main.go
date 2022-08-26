@@ -5,53 +5,21 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
+	mw "github.com/cemgurhan/api_gateway/authMiddleware"
 	gen "github.com/cemgurhan/api_gateway/buf/gen/proto_files"
 	impl "github.com/cemgurhan/api_gateway/bugs_service"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )
 
-// var (
-// 	grpcServerEndpoint = flag.String("grpc-server-endpoint", "localhost:9090", "gRPC server endpoint")
-// )
+var MySigningKey = []byte(os.Getenv("SECRET_KEY"))
 
-// func runHttpServer() error {
+var grpcAddress = ":9090"
 
-// 	ctx := context.Background()
-// 	ctx, cancel := context.WithCancel(ctx)
-// 	defer cancel()
+func grpcServer() {
 
-// 	fmt.Printf("serving http proxy on port %v \n", 8081)
-// 	fmt.Printf("serving grpc server on port %v \n", 9090)
-// 	//grpc server endpoint
-// 	grpcMux := runtime.NewServeMux()
-// 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-// 	err := gen.RegisterBugServiceHandlerFromEndpoint(ctx, grpcMux, "localhost:9090", opts)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// start http server, and proxy calls to grpc server endpoint
-// 	return http.ListenAndServe(":8081", grpcMux)
-
-// }
-
-// func main() {
-
-// 	// flag.Parse()
-
-// 	if err := runHttpServer(); err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	grpc.Dial(":8080")
-
-// }
-
-func main() {
-
-	grpcAddress := ":9090"
 	grpcLis, listenErr := net.Listen("tcp", grpcAddress)
 
 	if listenErr != nil {
@@ -66,7 +34,9 @@ func main() {
 		log.Fatalln(grpcServer.Serve(grpcLis))
 	}()
 
-	// ------- //
+}
+
+func apiGatewayProxyServer() {
 
 	conn, clientConnErr := grpc.DialContext(
 		context.Background(),
@@ -99,6 +69,22 @@ func main() {
 	}
 
 	log.Printf("Serving gRPC gateway on port %v \n", gatewayPort)
-	log.Fatal(gwServer.ListenAndServe())
+
+	log.Fatalln(gwServer.ListenAndServe())
+
+}
+
+func HomePage(w http.ResponseWriter, r *http.Request) {
+
+	apiGatewayProxyServer()
+
+}
+
+func main() {
+
+	grpcServer()
+
+	http.Handle("/", mw.IsAuthorized(HomePage))
+	log.Fatal(http.ListenAndServe(":9001", nil))
 
 }
