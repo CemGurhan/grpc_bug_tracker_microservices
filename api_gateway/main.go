@@ -76,13 +76,13 @@ func apiGatewayProxyServer() {
 
 func HomePage(w http.ResponseWriter, r *http.Request) {
 
+	grpcServer()
+
 	apiGatewayProxyServer()
 
 }
 
 func main() {
-
-	grpcServer()
 
 	http.Handle("/", mw.IsAuthorized(HomePage))
 	log.Fatal(http.ListenAndServe(":9001", nil))
