@@ -62,6 +62,7 @@ type GoogleClaims struct {
 func IsAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header["Token"] != nil {
+			// function to parse the token string
 			token, err := jwt.ParseWithClaims(
 				r.Header["Token"][0],
 				&GoogleClaims{},
