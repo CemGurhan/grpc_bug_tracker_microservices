@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	// "github.com/dgrijalva/jwt-go"
+	usercontext "github.com/cemgurhan/auth-microservice/context"
 	user "github.com/cemgurhan/auth-microservice/structs"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -17,9 +20,19 @@ import (
 var MySigningKey = []byte(os.Getenv("SECRET_KEY"))
 
 type GoogleUserService struct {
-	email_verified bool
-	email          string
-	audience       string
+	client *http.Client
+	admins []string
+}
+
+func RequestID(ctx context.Context) string {
+	requestID := ctx.Value(usercontext.UserContextKey)
+
+	if requestID == nil {
+		return "none"
+	}
+
+	return requestID.(string)
+
 }
 
 func getGooglePublicKey(keyID string) (string, error) {
@@ -50,18 +63,35 @@ func getGooglePublicKey(keyID string) (string, error) {
 // 	jwt.StandardClaims
 // }
 
-var GoogleClaims map[string]interface{}
+// var GoogleClaims map[string]interface{}
+
+func New(admins []string) *GoogleUserService {
+
+	s := &GoogleUserService{
+		client: &http.Client{Timeout: 5 * time.Second},
+		admins: admins,
+	}
+
+	return s
+}
 
 func IsAuthorized(handle http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u, err := authorize(r)
+
 		if err != nil {
 			log.Println(r.Context(), "jwt-auth: %v", err)
 		}
 
 		if err == nil && u != nil {
-			r = r.WithContext(WithUser(r.Context(), u))
+			r = r.WithContext(usercontext.WithUser(r.Context(), u))
+			// fmt.Println(usercontext.UserFromContext(usercontext.))
 			handle.ServeHTTP(w, r)
+			w.Write([]byte("hi"))
+			// w.Write([]byte(usercontext.UserFromContext(usercontext.WithUser(r.Context(), u))))
+			// fmt.Println(usercontext.UserFromContext(context.TODO()))
+
+			// endpoint(w, r)
 		}
 
 	})
@@ -69,7 +99,7 @@ func IsAuthorized(handle http.Handler) http.Handler {
 
 func authorize(r *http.Request) (*user.GoogleUser, error) {
 
-	if r.Header["Token"] != nil {
+	if r.Header["Token"] == nil {
 		return nil, errors.New("No token found in header")
 	}
 	// function to parse the token string
@@ -103,7 +133,7 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 		return nil, fmt.Errorf("could not extract claims (%T): %+v", token.Claims, token.Claims)
 	}
 
-	audience := "517952092472-duvetghsstc0deut8fvta8b7n2id8dg5.apps.googleusercontent.com" //not the best way
+	audience := "517952092472-duvetghsstc0deut8fvta8b7n2id8dg5.apps.googleusercontent.com" //not the right way - refactor
 
 	if claims["aud"].(string) != audience {
 		return nil, fmt.Errorf("mismatched audience. aud field %q does not match %q", claims["aud"], audience)
