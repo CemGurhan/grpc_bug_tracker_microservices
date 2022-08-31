@@ -92,9 +92,17 @@ func IsAuthorized(handle http.Handler) http.Handler {
 
 			userEmail := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).Email
 			emailVerified := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).EmailVerified
+			isAdmin := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).IsAdmin
 
-			w.Header().Set("User Email", userEmail)
-			w.Header().Set("Email Verified", emailVerified)
+			w.Header().Add("useremail", userEmail)
+
+			if emailVerified {
+				w.Header().Add("emailverified", "true")
+			}
+
+			if isAdmin {
+				w.Header().Add("isadmin", "true")
+			}
 
 			handle.ServeHTTP(w, r)
 			// call_gw.CallApiGateway(r.Context())
