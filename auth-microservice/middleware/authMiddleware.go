@@ -12,6 +12,7 @@ import (
 	"time"
 
 	// "github.com/dgrijalva/jwt-go"
+	call_gw "github.com/cemgurhan/auth-microservice/apiGateCall"
 	usercontext "github.com/cemgurhan/auth-microservice/context"
 	user "github.com/cemgurhan/auth-microservice/structs"
 	"github.com/golang-jwt/jwt/v4"
@@ -84,14 +85,13 @@ func IsAuthorized(handle http.Handler) http.Handler {
 		}
 
 		if err == nil && u != nil {
-			r = r.WithContext(usercontext.WithUser(r.Context(), u))
-			// fmt.Println(usercontext.UserFromContext(usercontext.))
-			handle.ServeHTTP(w, r)
-			w.Write([]byte("hi"))
-			// w.Write([]byte(usercontext.UserFromContext(usercontext.WithUser(r.Context(), u))))
-			// fmt.Println(usercontext.UserFromContext(context.TODO()))
 
-			// endpoint(w, r)
+			r = r.WithContext(usercontext.WithUser(r.Context(), u))
+
+			handle.ServeHTTP(w, r)
+
+			call_gw.CallApiGateway(r.Context())
+
 		}
 
 	})
@@ -133,7 +133,7 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 		return nil, fmt.Errorf("could not extract claims (%T): %+v", token.Claims, token.Claims)
 	}
 
-	audience := "517952092472-duvetghsstc0deut8fvta8b7n2id8dg5.apps.googleusercontent.com" //not the right way - refactor
+	audience := "517952092472-peg3hmbmanvtfd9ht3h8jacbsini8jtd.apps.googleusercontent.com" //not the right way - refactor
 
 	if claims["aud"].(string) != audience {
 		return nil, fmt.Errorf("mismatched audience. aud field %q does not match %q", claims["aud"], audience)
