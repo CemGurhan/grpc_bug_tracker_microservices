@@ -12,7 +12,7 @@ import (
 	"time"
 
 	// "github.com/dgrijalva/jwt-go"
-	call_gw "github.com/cemgurhan/auth-microservice/apiGateCall"
+
 	usercontext "github.com/cemgurhan/auth-microservice/context"
 	user "github.com/cemgurhan/auth-microservice/structs"
 	"github.com/golang-jwt/jwt/v4"
@@ -88,9 +88,16 @@ func IsAuthorized(handle http.Handler) http.Handler {
 
 			r = r.WithContext(usercontext.WithUser(r.Context(), u))
 
-			handle.ServeHTTP(w, r)
+			log.Println("User context:", usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)))
 
-			call_gw.CallApiGateway(r.Context())
+			userEmail := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).Email
+			emailVerified := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).EmailVerified
+
+			w.Header().Set("User Email", userEmail)
+			w.Header().Set("Email Verified", emailVerified)
+
+			handle.ServeHTTP(w, r)
+			// call_gw.CallApiGateway(r.Context())
 
 		}
 
@@ -109,15 +116,15 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 		func(token *jwt.Token) (interface{}, error) {
 
 			pem, err := getGooglePublicKey(fmt.Sprintf("%s", token.Header["kid"]))
+			if err != nil {
+				return nil, err
+			}
 
 			_, ok := token.Method.(*jwt.SigningMethodRSA) // validate alg claim
 			if !ok {
 				return nil, fmt.Errorf("unexpected signing method: %q", token.Header["alg"])
 			}
 
-			if err != nil {
-				return nil, err
-			}
 			key, err := jwt.ParseRSAPublicKeyFromPEM([]byte(pem))
 			if err != nil {
 				return nil, fmt.Errorf("Key is not a valid ECDSA public key!")
@@ -133,7 +140,7 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 		return nil, fmt.Errorf("could not extract claims (%T): %+v", token.Claims, token.Claims)
 	}
 
-	audience := "517952092472-peg3hmbmanvtfd9ht3h8jacbsini8jtd.apps.googleusercontent.com" //not the right way - refactor
+	audience := "517952092472-duvetghsstc0deut8fvta8b7n2id8dg5.apps.googleusercontent.com" //not the right way - refactor
 
 	if claims["aud"].(string) != audience {
 		return nil, fmt.Errorf("mismatched audience. aud field %q does not match %q", claims["aud"], audience)
@@ -145,6 +152,7 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 	return &user.GoogleUser{
 		EmailVerified: true,
 		Email:         email,
+		IsAdmin:       true,
 	}, nil
 
 }

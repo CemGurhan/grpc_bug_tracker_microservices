@@ -39,9 +39,15 @@ func main() { // try r.Group to share same context!!!
 
 	contextedMux := mw.IsAuthorized(mux)
 
+	// mux.Handle("/", mw.IsAuthorized(http.HandlerFunc(finalHandler)))
+
 	log.Fatal(http.ListenAndServe(":9001", contextedMux))
 
 }
+
+// func finalHandler(w http.ResponseWriter, r *http.Request) {
+// 	w.Write([]byte("handled"))
+// }
 
 // w.Header().Set("Content-Type", "application/json")
 
