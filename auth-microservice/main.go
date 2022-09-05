@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -22,17 +21,6 @@ func init() {
 
 type Server struct {
 	Router *chi.Mux
-}
-
-func RequestID(ctx context.Context) string {
-	requestID := ctx.Value(usercontext.UserContextKey)
-
-	if requestID == nil {
-		return "none"
-	}
-
-	return requestID.(string)
-
 }
 
 func CreateNewServer() *Server {
