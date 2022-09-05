@@ -2,13 +2,27 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 
-	mw "github.com/cemgurhan/auth-microservice/middleware"
-
 	usercontext "github.com/cemgurhan/auth-microservice/context"
+	mw "github.com/cemgurhan/auth-microservice/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/spf13/pflag"
 )
+
+var addr string
+
+func init() {
+
+	pflag.StringVarP(&addr, "address", "a", ":9001", "the address for the API to listen to")
+	pflag.Parse()
+
+}
+
+type Server struct {
+	Router *chi.Mux
+}
 
 func RequestID(ctx context.Context) string {
 	requestID := ctx.Value(usercontext.UserContextKey)
@@ -21,55 +35,35 @@ func RequestID(ctx context.Context) string {
 
 }
 
-func main() { // try r.Group to share same context!!!
-	// r := chi.NewRouter()
-	// r.Use(mw.IsAuthorized)
-	// r.Get("/", func(w http.ResponseWriter, req *http.Request) {
+func CreateNewServer() *Server {
+	s := &Server{}
+	s.Router = chi.NewRouter()
+	return s
+}
 
-	// 	fmt.Println("SUCCESS")
-	// 	fmt.Println(usercontext.UserFromContext(req.Context()))
+func (s *Server) MountHandlers() {
 
-	// },
-	// )
-	// // fmt.Println(RequestID(context.TODO()))
-
-	// http.ListenAndServe(":9001", r)
-
-	mux := http.NewServeMux()
-
-	contextedMux := mw.IsAuthorized(mux)
-
-	// mux.Handle("/", mw.IsAuthorized(http.HandlerFunc(finalHandler)))
-
-	log.Fatal(http.ListenAndServe(":9001", contextedMux))
+	s.Router.Use(mw.IsAuthorized)
+	s.Router.Get("/auth", getUserFromContext)
 
 }
 
-// func finalHandler(w http.ResponseWriter, r *http.Request) {
-// 	w.Write([]byte("handled"))
-// }
+func getUserFromContext(w http.ResponseWriter, r *http.Request) {
 
-// w.Header().Set("Content-Type", "application/json")
+	contextuser := usercontext.UserFromContext(r.Context())
 
-// requestURL := fmt.Sprintf("http://localhost:8081%v", req.RequestURI)
-// var response *http.Response
-// var err error
-// if req.Method == "GET" {
-// 	response, err = http.Get(requestURL)
-// } else {
-// 	response, err = http.Post(requestURL, "application/json", req.Body)
-// }
+	w.Write([]byte(fmt.Sprintf("user: %v", contextuser)))
 
-// if err != nil {
-// 	w.WriteHeader(http.StatusBadGateway)
-// 	w.Write([]byte(fmt.Sprintf("%v", err)))
-// }
+}
 
-// responseData, err := ioutil.ReadAll(response.Body)
-// if err != nil {
-// 	log.Fatal(err)
-// }
+func main() {
 
-// w.Write(responseData)
-// w.WriteHeader(http.StatusOK)
-// fmt.Println(usercontext.UserFromContext())
+	s := CreateNewServer()
+
+	s.MountHandlers()
+
+	fmt.Println("Listening on port:", addr)
+
+	http.ListenAndServe(addr, s.Router)
+
+}

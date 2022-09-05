@@ -58,14 +58,6 @@ func getGooglePublicKey(keyID string) (string, error) {
 	return key, nil
 }
 
-// type GoogleClaims struct {
-// 	Email         string `json:"email"`
-// 	EmailVerified bool   `json:"email_verified"`
-// 	jwt.StandardClaims
-// }
-
-// var GoogleClaims map[string]interface{}
-
 func New(admins []string) *GoogleUserService {
 
 	s := &GoogleUserService{
@@ -88,28 +80,12 @@ func IsAuthorized(handle http.Handler) http.Handler {
 
 			r = r.WithContext(usercontext.WithUser(r.Context(), u))
 
-			log.Println("User context:", usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)))
-
-			userEmail := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).Email
-			emailVerified := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).EmailVerified
-			isAdmin := usercontext.UserFromContext(usercontext.WithUser(r.Context(), u)).IsAdmin
-
-			w.Header().Add("useremail", userEmail)
-
-			if emailVerified {
-				w.Header().Add("emailverified", "true")
-			}
-
-			if isAdmin {
-				w.Header().Add("isadmin", "true")
-			}
-
 			handle.ServeHTTP(w, r)
-			// call_gw.CallApiGateway(r.Context())
 
 		}
 
 	})
+
 }
 
 func authorize(r *http.Request) (*user.GoogleUser, error) {
@@ -148,7 +124,7 @@ func authorize(r *http.Request) (*user.GoogleUser, error) {
 		return nil, fmt.Errorf("could not extract claims (%T): %+v", token.Claims, token.Claims)
 	}
 
-	audience := "517952092472-duvetghsstc0deut8fvta8b7n2id8dg5.apps.googleusercontent.com" //not the right way - refactor
+	audience := "517952092472-peg3hmbmanvtfd9ht3h8jacbsini8jtd.apps.googleusercontent.com" //not the right way - refactor
 
 	if claims["aud"].(string) != audience {
 		return nil, fmt.Errorf("mismatched audience. aud field %q does not match %q", claims["aud"], audience)
